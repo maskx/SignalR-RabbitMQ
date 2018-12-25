@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <LangVersion>7.2</LangVersion>
+    <RootNamespace>maskx.AspNetCore.SignalR.RabbitMQ</RootNamespace>
+    <AssemblyName>maskx.AspNetCore.SignalR.RabbitMQ</AssemblyName>
+    <Description>0.0.*.*  for SignalR 1.1.0
+0.1.*.* for SignalR 1.0.4</Description>
+    <Version>0.1.0.2</Version>
+    <Authors>maskx</Authors>
+    <Company>maskxmaskx</Company>
+    <Copyright>MIT License</Copyright>
+    <PackageProjectUrl>https://github.com/maskx/SignalR-RabbitMQ</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\AckHandler.cs" Link="Internal\AckHandler.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\GroupAction.cs" Link="Internal\GroupAction.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\MemoryBufferWriter.cs" Link="Internal\MemoryBufferWriter.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\MessagePackUtil.cs" Link="Internal\MessagePackUtil.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\RabbitMQBus.cs" Link="Internal\RabbitMQBus.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\RabbitMQChannel.cs" Link="Internal\RabbitMQChannel.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\RabbitMQGroupCommand.cs" Link="Internal\RabbitMQGroupCommand.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\RabbitMQInvocation.cs" Link="Internal\RabbitMQInvocation.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\RabbitMQLog.cs" Link="Internal\RabbitMQLog.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\RabbitMQProtocol.cs" Link="Internal\RabbitMQProtocol.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\Internal\RabbitMQSubscriptionManager.cs" Link="Internal\RabbitMQSubscriptionManager.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\RabbitMQDependencyInjectionExtensions.cs" Link="RabbitMQDependencyInjectionExtensions.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\RabbitMQHubLifetimeManager.cs" Link="RabbitMQHubLifetimeManager.cs" />
+    <Compile Include="..\maskx.AspNetCore.SignalR.RabbitMQ\RabbitMQOptions.cs" Link="RabbitMQOptions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Internal\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MessagePack" Version="1.7.3.4" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.0.4" />
+    <PackageReference Include="RabbitMQ.Client" Version="5.1.0" />
+  </ItemGroup>
+
+</Project>

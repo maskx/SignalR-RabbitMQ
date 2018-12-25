@@ -3,12 +3,14 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <LangVersion>7.2</LangVersion>
-    <Version>0.0.0.1</Version>
+    <Version>0.0.0.2</Version>
     <Authors>maskx</Authors>
     <PackageProjectUrl>https://github.com/maskx/SignalR-RabbitMQ</PackageProjectUrl>
     <RepositoryUrl></RepositoryUrl>
     <PackageLicenseUrl></PackageLicenseUrl>
     <Copyright>MIT License</Copyright>
+    <Description>0.0.*.*  for SignalR 1.1.0
+0.1.*.* for SignalR 1.0.4</Description>
   </PropertyGroup>
 
   <ItemGroup>
