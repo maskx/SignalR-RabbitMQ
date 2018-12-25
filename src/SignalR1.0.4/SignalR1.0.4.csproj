@@ -7,7 +7,7 @@
     <AssemblyName>maskx.AspNetCore.SignalR.RabbitMQ</AssemblyName>
     <Description>0.0.*.*  for SignalR 1.1.0
 0.1.*.* for SignalR 1.0.4</Description>
-    <Version>0.1.0.2</Version>
+    <Version>0.1.0.3</Version>
     <Authors>maskx</Authors>
     <Company>maskxmaskx</Company>
     <Copyright>MIT License</Copyright>

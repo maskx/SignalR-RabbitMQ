@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using RabbitMQ.Client;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -84,7 +86,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
             void Run()
             {
                 RunProcessAndThrowIfFailed(_path, $"run --rm -p 5672:5672 -d --hostname {_dockerContainerName} --name {_dockerContainerName}  rabbitmq:3", "rabbitmq", logger, TimeSpan.FromSeconds(30));
-
             }
         }
 
@@ -109,8 +110,36 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
             var (monitorProcess, monitorOutput) = RunProcess(_path, $"run -i --name {_dockerMonitorContainerName} --link {_dockerContainerName}:rabbitmq --rm rabbitmq rabbitmqctl -h", "rabbitmq monitor", logger);
             monitorProcess.StandardInput.WriteLine("MONITOR");
             monitorProcess.StandardInput.Flush();
-        }
 
+            //wait for RabbitMQ startup
+            while (!IsConnected())
+            {
+                Thread.Sleep(1000);
+            }
+
+        }
+        bool IsConnected()
+        {
+            IConnection connection = null; 
+            try
+            {
+              connection=  new ConnectionFactory()
+                {
+                    HostName = "localhost",
+                    Port = 5672
+                }.CreateConnection();
+                return connection.IsOpen;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+            finally
+            {
+                if (connection != null)
+                    connection.Close();
+            }
+        }
         public void Stop(ILogger logger)
         {
             // Get logs from rabbit container before stopping the container
