@@ -84,40 +84,34 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
                     switch (Enum.Parse<RabbitMQChannel>(Encoding.UTF8.GetString((byte[])channel)))
                     {
                         case RabbitMQChannel.All:
-                            Write(_Connections.Values.GetEnumerator(), _Protocol.ReadInvocation(e.Body), _Connections.Count);
+                            WriteConnections(_Connections.Values.GetEnumerator(), _Protocol.ReadInvocation(e.Body), _Connections.Count);
                             break;
                         case RabbitMQChannel.Group:
-                            WriteGroup(_Protocol.ReadInvocation(e.Body), Encoding.UTF8.GetString((byte[])channelId));
+                            WriteGroup(Encoding.UTF8.GetString((byte[])channelId), _Protocol.ReadInvocation(e.Body));
                             break;
                         case RabbitMQChannel.Groups:
                             var groups = _Protocol.ReadList((byte[])channelId);
                             var groupInvocation = _Protocol.ReadInvocation(e.Body);
-                            foreach (var group in groups)
-                            {
-                                WriteGroup(groupInvocation, group);
-                            }
+                            WriteGroups(groups, groupInvocation);
                             break;
                         case RabbitMQChannel.Connection:
-                            WriteConnection(_Protocol.ReadInvocation(e.Body), Encoding.UTF8.GetString((byte[])channelId));
+                            WriteConnection(Encoding.UTF8.GetString((byte[])channelId), _Protocol.ReadInvocation(e.Body));
                             break;
                         case RabbitMQChannel.Connections:
                             var connections = _Protocol.ReadList((byte[])channelId);
                             var connectionInvocation = _Protocol.ReadInvocation(e.Body);
                             foreach (var connection in connections)
                             {
-                                WriteConnection(connectionInvocation, connection);
+                                WriteConnection(connection, connectionInvocation);
                             }
                             break;
                         case RabbitMQChannel.User:
-                            WriteUser(_Protocol.ReadInvocation(e.Body), Encoding.UTF8.GetString((byte[])channelId));
+                            WriteUser(Encoding.UTF8.GetString((byte[])channelId), _Protocol.ReadInvocation(e.Body));
                             break;
                         case RabbitMQChannel.Users:
                             var users = _Protocol.ReadList((byte[])channelId);
                             var userInvocation = _Protocol.ReadInvocation(e.Body);
-                            foreach (var user in users)
-                            {
-                                WriteUser(userInvocation, user);
-                            }
+                            WriteUsers(users, userInvocation);
                             break;
                         case RabbitMQChannel.GroupCommand:
                             if (this._Connections.TryGetValue(channelId.ToString(), out HubConnectionContext cmdConnection))
@@ -154,6 +148,10 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
                 this._SubscribeModel.BasicAck(e.DeliveryTag, multiple: false);
             }
         }
+
+       
+
+
 
         #region publish to RabbitMQ
         private async Task SendAck(int messageId, string queueName)
@@ -195,7 +193,7 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
             await Task.Run(() =>
             {
                 var list = channelId as IReadOnlyList<string>;
-               if(list!=null)
+                if (list != null)
                 {
                     channelId = _Protocol.WriteList(list);
                 }
@@ -322,33 +320,59 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
         }
 
         #region Write HubConnectionContext
-        private void WriteUser(RabbitMQInvocation invocation, string userId)
+        private void WriteUser(string userId, RabbitMQInvocation invocation)
         {
-            if (this._Users.TryGetValue(userId, out HubConnectionContext connection))
+            if (this._Users.TryGetValue(userId, out HubConnectionContext hubConnection))
             {
-                Write(connection, invocation);
+                hubConnection.WriteAsync(invocation.Message).AsTask().Wait();
             }
         }
-        private void WriteConnection(RabbitMQInvocation invocation, string connectionId)
+        private void WriteUsers(IReadOnlyList<string> users, RabbitMQInvocation invocation)
+        {
+            var tasks = new List<Task>(users.Count);
+            foreach (var userId in users)
+            {
+                if (this._Users.TryGetValue(userId, out HubConnectionContext hubConnection))
+                {
+                 tasks.Add(hubConnection.WriteAsync(invocation.Message).AsTask());
+                }
+            }
+            Task.WaitAll(tasks.ToArray());
+        }
+        private void WriteConnection(string connectionId, RabbitMQInvocation invocation)
         {
             if (this._Connections.TryGetValue(connectionId, out HubConnectionContext hubConnection))
             {
-                Write(hubConnection, invocation);
+                hubConnection.WriteAsync(invocation.Message).AsTask().Wait();
             }
         }
-
-        private void WriteGroup(RabbitMQInvocation invocation, string groupId)
+        private void WriteGroups(IReadOnlyList<string> groups, RabbitMQInvocation invocation)
+        {
+            List<Task> tasks = new List<Task>();
+            foreach (var groupId in groups)
+            {
+                if (this._Groups.TryGetValue(groupId, out HubConnectionStore groupStroe))
+                {
+                    var connections = groupStroe.GetEnumerator();
+                    while (connections.MoveNext())
+                    {
+                        if (invocation.ExcludedConnectionIds == null || !invocation.ExcludedConnectionIds.Contains(connections.Current.ConnectionId))
+                        {
+                            tasks.Add(connections.Current.WriteAsync(invocation.Message).AsTask());
+                        }
+                    }
+                }
+            }
+            Task.WaitAll(tasks.ToArray());
+        }
+        private void WriteGroup(string groupId, RabbitMQInvocation invocation)
         {
             if (this._Groups.TryGetValue(groupId, out HubConnectionStore groupStroe))
             {
-                Write(groupStroe.GetEnumerator(), invocation, groupStroe.Count);
+                WriteConnections(groupStroe.GetEnumerator(), invocation, groupStroe.Count);
             }
         }
-        private void Write(HubConnectionContext connection, RabbitMQInvocation invocation)
-        {
-            connection.WriteAsync(invocation.Message);
-        }
-        private void Write(IEnumerator<HubConnectionContext> connections, RabbitMQInvocation invocation, int count = 1)
+        private void WriteConnections(IEnumerator<HubConnectionContext> connections, RabbitMQInvocation invocation, int count = 1)
         {
             var tasks = new List<Task>(count);
             while (connections.MoveNext())

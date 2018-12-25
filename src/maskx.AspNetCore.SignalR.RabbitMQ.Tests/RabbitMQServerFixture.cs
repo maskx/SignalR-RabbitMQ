@@ -17,8 +17,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
         private readonly IDisposable _logToken;
         public RabbitMQServerFixture()
         {
-            // Docker is not available on the machine, tests using this fixture
-            // should be using SkipIfDockerNotPresentAttribute and will be skipped.
             if (Docker.Default == null)
             {
                 return;

@@ -33,7 +33,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
             _serverFixture = serverFixture;
         }
         [ConditionalTheory]
-        [SkipIfDockerNotPresent]
         [MemberData(nameof(TransportTypesAndProtocolTypes))]
         public async Task HubConnectionCanSendAndReceiveMessages(HttpTransportType transportType, string protocolName)
         {
@@ -53,7 +52,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
         }
 
         [ConditionalTheory]
-        [SkipIfDockerNotPresent]
         [MemberData(nameof(TransportTypesAndProtocolTypes))]
         public async Task HubConnectionCanSendAndReceiveGroupMessages(HttpTransportType transportType, string protocolName)
         {
@@ -85,7 +83,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
         }
 
         [ConditionalTheory]
-        [SkipIfDockerNotPresent]
         [MemberData(nameof(TransportTypesAndProtocolTypes))]
         public async Task CanSendAndReceiveUserMessagesFromMultipleConnectionsWithSameUser(HttpTransportType transportType, string protocolName)
         {
@@ -114,7 +111,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
         }
 
         [ConditionalTheory]
-        [SkipIfDockerNotPresent]
         [MemberData(nameof(TransportTypesAndProtocolTypes))]
         public async Task CanSendAndReceiveUserMessagesWhenOneConnectionWithUserDisconnects(HttpTransportType transportType, string protocolName)
         {
