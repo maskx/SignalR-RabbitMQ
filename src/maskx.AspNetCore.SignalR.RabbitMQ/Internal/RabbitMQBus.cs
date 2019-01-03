@@ -22,11 +22,12 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
         private string _QueueName { get; }
         private readonly ILogger _Logger;
         private readonly RabbitMQProtocol _Protocol;
-        private readonly SemaphoreSlim _Lock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _GroupLock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _UserLock = new SemaphoreSlim(1, 1);
         private int _InternalId;
         private readonly AckHandler _ackHandler;
         private readonly ConcurrentDictionary<string, HubConnectionStore> _Groups = new ConcurrentDictionary<string, HubConnectionStore>(StringComparer.Ordinal);
-        private readonly ConcurrentDictionary<string, HubConnectionContext> _Users = new ConcurrentDictionary<string, HubConnectionContext>(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<string, HubConnectionStore> _Users = new ConcurrentDictionary<string, HubConnectionStore>(StringComparer.Ordinal);
         private readonly ConcurrentDictionary<string, HubConnectionContext> _Connections = new ConcurrentDictionary<string, HubConnectionContext>();
 
         public bool IsConnected
@@ -53,10 +54,8 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
                 try
                 {
                     this._Connection = _RabbitMQOptions.ConnectionFactory.CreateConnection();
-
                     this._PublishModel = this._Connection.CreateModel();
                     this._SubscribeModel = this._Connection.CreateModel();
-
                     this._PublishModel.ExchangeDeclare(this._RabbitMQOptions.ExchangeName, ExchangeType.Fanout, durable: true);
                     this._SubscribeModel.QueueDeclare(this._QueueName, durable: false, exclusive: false, autoDelete: true, arguments: new Dictionary<string, object>());
                     this._SubscribeModel.QueueBind(this._QueueName, this._RabbitMQOptions.ExchangeName, string.Empty);
@@ -149,10 +148,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
             }
         }
 
-       
-
-
-
         #region publish to RabbitMQ
         private async Task SendAck(int messageId, string queueName)
         {
@@ -230,30 +225,42 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
             });
 
         }
-        public Task SubscribeToUser(HubConnectionContext connection)
+        public async Task SubscribeToUser(HubConnectionContext connection)
         {
-            return Task.Run(() =>
+            await _UserLock.WaitAsync();
+            try
             {
-                _Users.TryAdd(connection.UserIdentifier, connection);
+                HubConnectionStore subscription = this._Users.GetOrAdd(connection.UserIdentifier, _ => new HubConnectionStore());
+                subscription.Add(connection);
                 RabbitMQLog.Subscribing(_Logger, "SubscribeToUser:" + connection.ConnectionId);
-            });
-        }
-        public Task UnSubscribeUser(HubConnectionContext connection)
-        {
-
-            return Task.Run(() =>
+            }
+            finally
             {
-                _Users.TryRemove(connection.UserIdentifier, out HubConnectionContext value);
-                RabbitMQLog.Unsubscribe(_Logger, "UnSubscribeUser:" + connection.ConnectionId);
-            });
-
+                _UserLock.Release();
+            }
+        }
+        public async Task UnSubscribeUser(HubConnectionContext connection)
+        {
+            await _UserLock.WaitAsync();
+            try
+            {
+                if (_Users.TryGetValue(connection.UserIdentifier, out var subscription))
+                {
+                    subscription.Remove(connection);
+                    RabbitMQLog.Unsubscribe(_Logger, "UnSubscribeUser:" + connection.ConnectionId);
+                }
+            }
+            finally
+            {
+                _UserLock.Release();
+            }
         }
         #endregion
 
         #region group command
         private async Task AddGroup(HubConnectionContext connection, string group)
         {
-            await _Lock.WaitAsync();
+            await _GroupLock.WaitAsync();
             try
             {
                 HubConnectionStore subscription = this._Groups.GetOrAdd(group, _ => new HubConnectionStore());
@@ -261,7 +268,7 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
             }
             finally
             {
-                _Lock.Release();
+                _GroupLock.Release();
             }
         }
         public async Task AddGroup(string connectionId, string group)
@@ -273,7 +280,7 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
         }
         public async Task RemoveGroup(HubConnectionContext connection, string group)
         {
-            await _Lock.WaitAsync();
+            await _GroupLock.WaitAsync();
             try
             {
                 if (_Groups.TryGetValue(group, out var subscription))
@@ -283,7 +290,7 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
             }
             finally
             {
-                _Lock.Release();
+                _GroupLock.Release();
             }
         }
         public async Task RemoveGroup(string connectionId, string group)
@@ -322,19 +329,29 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
         #region Write HubConnectionContext
         private void WriteUser(string userId, RabbitMQInvocation invocation)
         {
-            if (this._Users.TryGetValue(userId, out HubConnectionContext hubConnection))
+            List<Task> tasks = new List<Task>();
+            if (this._Users.TryGetValue(userId, out HubConnectionStore store))
             {
-                hubConnection.WriteAsync(invocation.Message).AsTask().Wait();
+                var connections = store.GetEnumerator();
+                while (connections.MoveNext())
+                {
+                    tasks.Add(connections.Current.WriteAsync(invocation.Message).AsTask());
+                }
             }
+            Task.WaitAll(tasks.ToArray());
         }
         private void WriteUsers(IReadOnlyList<string> users, RabbitMQInvocation invocation)
         {
             var tasks = new List<Task>(users.Count);
             foreach (var userId in users)
             {
-                if (this._Users.TryGetValue(userId, out HubConnectionContext hubConnection))
+                if (this._Users.TryGetValue(userId, out HubConnectionStore store))
                 {
-                 tasks.Add(hubConnection.WriteAsync(invocation.Message).AsTask());
+                    var connections = store.GetEnumerator();
+                    while (connections.MoveNext())
+                    {
+                        tasks.Add(connections.Current.WriteAsync(invocation.Message).AsTask());
+                    }
                 }
             }
             Task.WaitAll(tasks.ToArray());

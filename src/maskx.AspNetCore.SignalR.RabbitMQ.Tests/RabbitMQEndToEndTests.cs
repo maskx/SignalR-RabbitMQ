@@ -138,6 +138,37 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
             }
         }
 
+        [ConditionalTheory]
+        [MemberData(nameof(TransportTypesAndProtocolTypes))]
+        public async Task OneUserTwoConnectionOneServer(HttpTransportType transportType, string protocolName)
+        {
+            using (StartVerifiableLog())
+            {
+                using (StartVerifiableLog())
+                {
+                    var protocol = HubProtocolHelpers.GetHubProtocol(protocolName);
+
+                    var connection = CreateConnection(_serverFixture.FirstServer.Url + "/echo", transportType, protocol, LoggerFactory, userName: "userA");
+                    var secondConnection = CreateConnection(_serverFixture.FirstServer.Url + "/echo", transportType, protocol, LoggerFactory, userName: "userA");
+
+                    var tcs = new TaskCompletionSource<string>();
+                    connection.On<string>("Echo", message => tcs.TrySetResult(message));
+                    var tcs2 = new TaskCompletionSource<string>();
+                    secondConnection.On<string>("Echo", message => tcs2.TrySetResult(message));
+
+                    await secondConnection.StartAsync().OrTimeout();
+                    await connection.StartAsync().OrTimeout();
+                    await connection.InvokeAsync("EchoUser", "userA", "Hello, World!").OrTimeout();
+
+                    Assert.Equal("Hello, World!", await tcs.Task.OrTimeout());
+                    Assert.Equal("Hello, World!", await tcs2.Task.OrTimeout());
+
+                    await connection.DisposeAsync().OrTimeout();
+                    await secondConnection.DisposeAsync().OrTimeout();
+                }
+            }
+        }
+
         private static HubConnection CreateConnection(string url, HttpTransportType transportType, IHubProtocol protocol, ILoggerFactory loggerFactory, string userName = null)
         {
             var hubConnectionBuilder = new HubConnectionBuilder()
