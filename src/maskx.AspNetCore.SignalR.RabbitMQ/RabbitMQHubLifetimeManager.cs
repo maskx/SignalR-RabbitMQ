@@ -192,28 +192,6 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ
                 }
             }
         }
-        private class LoggerTextWriter : TextWriter
-        {
-            private readonly ILogger _logger;
-
-            public LoggerTextWriter(ILogger logger)
-            {
-                _logger = logger;
-            }
-
-            public override Encoding Encoding => Encoding.UTF8;
-
-            public override void Write(char value)
-            {
-
-            }
-
-            public override void WriteLine(string value)
-            {
-                RabbitMQLog.ConnectionMessage(_logger, value);
-            }
-        }
-
         private interface IRabbitMQFeature
         {
             HashSet<string> Groups { get; }

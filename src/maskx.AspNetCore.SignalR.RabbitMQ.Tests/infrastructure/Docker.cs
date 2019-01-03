@@ -120,17 +120,17 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Tests
         }
         bool IsConnected()
         {
-            IConnection connection = null; 
+            IConnection connection = null;
             try
             {
-              connection=  new ConnectionFactory()
+                connection = new ConnectionFactory()
                 {
                     HostName = "localhost",
                     Port = 5672
                 }.CreateConnection();
                 return connection.IsOpen;
             }
-            catch (Exception ex)
+            catch
             {
                 return false;
             }

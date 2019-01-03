@@ -101,15 +101,5 @@ namespace maskx.AspNetCore.SignalR.RabbitMQ.Internal
         {
             _internalMessageFailed(logger, exception);
         }
-
-        // This isn't DefineMessage-based because it's just the simple TextWriter logging from ConnectionMultiplexer
-        public static void ConnectionMessage(ILogger logger, string message)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                // We tag it with EventId 100 though so it can be pulled out of logs easily.
-                logger.LogDebug(new EventId(100, "RabbitConnectionLog"), message);
-            }
-        }
     }
 }
