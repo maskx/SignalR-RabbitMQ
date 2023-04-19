@@ -12,7 +12,7 @@
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="1.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="1.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="1.1.5" />
     <PackageReference Include="Microsoft.AspNetCore.Testing" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Testing" Version="2.2.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
